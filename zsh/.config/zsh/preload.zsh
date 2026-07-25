@@ -46,7 +46,6 @@ export EDITOR=nvim
 # 在 zsh-vi-mode 加载后统一设置
 #
 #
-export HI_SHELL_HOME="$HOME/.local/hi-shell"
 
 source $HOME/.config/zsh/plugins.zsh
 

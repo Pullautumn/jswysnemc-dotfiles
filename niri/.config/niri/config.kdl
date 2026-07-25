@@ -27,3 +27,6 @@ include "conf.d/binds.kdl"
 // 使用了frok版本niri,如果使用官方版本请注释掉下面这一行
 include "conf.d/shorinfork.kdl"
 
+
+include "./noctalia.kdl"
+

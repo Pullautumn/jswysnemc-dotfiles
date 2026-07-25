@@ -90,11 +90,12 @@ def draw_tab(
         
         # 4. 在按钮后绘制一格空格
         screen.draw(" ")
+        end = screen.cursor.x
         
         # 5. 若是最后一个元素则在最右侧绘制星轨系统状态栏
-        if is_last:
+        if is_last and not extra_data.for_layout:
             draw_right_status(screen, draw_data, default_bg, active_bg, inactive_fg)
-        return screen.cursor.x
+        return end
         
     # 6. 配置普通标签页的绘制样式，根据激活状态切换星轨圆点指示器
     if tab.is_active:
@@ -125,12 +126,13 @@ def draw_tab(
     screen.cursor.bold = False
     screen.cursor.fg = inactive_fg
     screen.draw("┊")
+    end = screen.cursor.x
     
     # 11. 若是最后一个真实标签则绘制最右侧系统状态
-    if is_last:
+    if is_last and not extra_data.for_layout:
         draw_right_status(screen, draw_data, default_bg, active_bg, inactive_fg)
         
-    return screen.cursor.x
+    return end
 
 def draw_right_status(
     screen: Screen, 
@@ -147,6 +149,9 @@ def draw_right_status(
         default_bg (int): 默认背景色
         active_bg (int): 激活状态背景色
         inactive_fg (int): 未激活状态前景色
+
+    返回:
+        None
     """
     # 1. 获取系统 CPU 和内存使用百分比
     cpu_val = psutil.cpu_percent(interval=None)
@@ -182,13 +187,36 @@ def draw_right_status(
     screen.draw(mem_str)
 
 from kitty.tabs import TabManager
-from kitty.fast_data_types import GLFW_RELEASE, get_boss
+from kitty.fast_data_types import GLFW_MOUSE_BUTTON_RIGHT, GLFW_RELEASE, get_boss
 
-# 保存系统原始的鼠标事件处理函数
-original_handle_tab_bar_mouse = TabManager.handle_tab_bar_mouse
+# 保存系统原始的鼠标事件处理函数，避免配置热加载后重复包裹
+previous_original_handle_tab_bar_mouse = globals().get("original_handle_tab_bar_mouse")
+current_handle_tab_bar_mouse = TabManager.handle_tab_bar_mouse
+original_handle_tab_bar_mouse = getattr(
+    current_handle_tab_bar_mouse,
+    "_snemc_original_handle_tab_bar_mouse",
+    None,
+)
+if original_handle_tab_bar_mouse is None:
+    original_handle_tab_bar_mouse = getattr(
+        TabManager,
+        "_snemc_original_handle_tab_bar_mouse",
+        None,
+    )
+if original_handle_tab_bar_mouse is None:
+    original_handle_tab_bar_mouse = previous_original_handle_tab_bar_mouse
+if original_handle_tab_bar_mouse is None:
+    original_handle_tab_bar_mouse = getattr(
+        current_handle_tab_bar_mouse,
+        "__globals__",
+        {},
+    ).get("original_handle_tab_bar_mouse")
+if original_handle_tab_bar_mouse is None:
+    original_handle_tab_bar_mouse = current_handle_tab_bar_mouse
+TabManager._snemc_original_handle_tab_bar_mouse = original_handle_tab_bar_mouse
 
 def patched_handle_tab_bar_mouse(self, x: float, y: float, button: int, modifiers: int, action: int) -> None:
-    """对 Kitty 的标签栏鼠标事件进行代理拦截，将右键修改为在活动标签页工作路径下打开新标签页
+    """对 Kitty 的标签栏鼠标事件进行代理拦截，将空白区右键改为在活动标签页工作路径下打开新标签页
 
     参数:
         self (TabManager): Kitty 的 Tab 管理器实例
@@ -197,22 +225,24 @@ def patched_handle_tab_bar_mouse(self, x: float, y: float, button: int, modifier
         button (int): 点击的鼠标按键编号
         modifiers (int): 键盘修饰键状态
         action (int): 鼠标动作类型（按下或释放）
-    """
-    # 1. 尝试从 fast_data_types 中导入右键常量，若失败则使用 GLFW 标准值 1
-    try:
-        from kitty.fast_data_types import GLFW_MOUSE_BUTTON_RIGHT
-    except ImportError:
-        GLFW_MOUSE_BUTTON_RIGHT = 1
 
-    # 2. 如果点击的按键为右键
+    返回:
+        None
+    """
+    # 1. 如果点击的按键为右键
     if button == GLFW_MOUSE_BUTTON_RIGHT:
-        # 3. 仅在鼠标右键释放时执行打开新标签页逻辑
+        # 2. 仅在空白区或新建按钮区域右键释放时执行打开新标签页逻辑
         if action == GLFW_RELEASE:
-            get_boss().new_tab_with_cwd()
+            tab_id_at_x = self.tab_bar.tab_id_at(int(x))
+            if tab_id_at_x < 0 or self.tab_for_id(tab_id_at_x) is None:
+                get_boss().new_tab_with_cwd()
         return
 
-    # 4. 对于非右键事件，执行 Kitty 原生的鼠标事件处理逻辑
+    # 3. 对于非右键事件，执行 Kitty 原生的鼠标事件处理逻辑
     original_handle_tab_bar_mouse(self, x, y, button, modifiers, action)
 
-# 6. 将新的代理函数动态注入到 TabManager 类中以使补丁生效
+# 4. 将原始处理函数挂到代理函数上，便于后续配置热加载时复用
+patched_handle_tab_bar_mouse._snemc_original_handle_tab_bar_mouse = original_handle_tab_bar_mouse
+
+# 5. 将新的代理函数动态注入到 TabManager 类中以使补丁生效
 TabManager.handle_tab_bar_mouse = patched_handle_tab_bar_mouse

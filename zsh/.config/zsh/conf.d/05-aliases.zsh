@@ -8,12 +8,10 @@ alias nv='nvim'
 alias vi='nvim'
 alias vim='nvim'
 alias sd='sudoedit'
-alias psr='podman stop linux-teaching-env && podman rm linux-teaching-env'
+alias psr='ndpodman stop linux-teaching-env && podman rm linux-teaching-env'
 alias pr='podman run -it --name linux-teaching-env --dns=114.114.114.114 docker.io/library/archlinux:latest /bin/bash'
-alias indextts='indextts --model_dir ~/.local/share/index-tts/index-tts/checkpoints -c ~/.local/share/index-tts/index-tts/checkpoints/config.yaml'
 alias uvr='$HOME/.conda/envs/uvr5/bin/python $HOME/.local/share/uvr5/ultimatevocalremovergui/UVR.py'
 alias tssh='ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no'
-alias npm=pnpm
 alias yay=paru
 alias k="ps aux | fzf --height 40% --reverse | awk '{print $2}' | xargs kill -9"
 alias gc="git clone"
@@ -22,12 +20,14 @@ alias ca="chat ask --stream"
 alias cn="chat ask --stream --new-session"
 alias ct="chat ask --stream --new-session --temp"
 # GROK_SEARCH_MODEL="grok-4-20-fast"
-GROK_SEARCH_MODEL="grok-4-20-multi-agent"
+GROK_SEARCH_MODEL="grok-4-20-multi-agent-xhigh"
 alias cgt="chat ask --stream --new-session --temp --model $GROK_SEARCH_MODEL --provider grok2api"
 alias cga="chat ask --stream --model $GROK_SEARCH_MODEL --provider grok2api"
 alias cgn="chat ask --stream --new-session --model $GROK_SEARCH_MODEL --provider grok2api"
 alias ccm="chat config model use \`chat config model list| fzf\`"
 alias tuiw=" setsid kitty --single-instance --instance-group=widgets -o tab_bar_style=hidden -e"
+alias qode="qoderclicn --permission-mode bypass_permissions"
+
 
 css() {
     chat session switch "$(chat --no-color session list | fzf | awk '{print ($1=="*" ? $2 : $1)}')"

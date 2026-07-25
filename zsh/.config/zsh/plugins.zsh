@@ -90,6 +90,7 @@ zvm_after_init() {
 }
 
 
+#eval "$(sai --init zsh)"
 
 
 # 加载 zoxide插件
@@ -99,6 +100,7 @@ alias zl='zoxide query -i'
 alias z='__zoxide_z'
 alias c='print -z $(zl)'
 unset zi
+
 
 
 
